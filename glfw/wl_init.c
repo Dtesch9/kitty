@@ -324,10 +324,11 @@ static void keyboardHandleKeymap(void* data UNUSED,
 }
 
 static bool
-needs_synthetic_key_repeat(void) { return _glfw.wl.keyboardRepeatRate > 0 && !_glfw.wl.has_key_repeat_events; }
+needs_synthetic_key_repeat(void) { return _glfw.wl.keyboardRepeatRate > 0; }
 
 static void
 start_key_repeat_timer(bool initial) {
+    if (_glfw.wl.keyboardRepeatRate <= 0) return;
 #ifdef HAS_TIMER_FD
     (void)initial;
     struct itimerspec new_value = {.it_value={.tv_nsec = _glfw.wl.keyboardRepeatDelay}, .it_interval={.tv_nsec = (s_to_monotonic_t(1ll) / (monotonic_t)_glfw.wl.keyboardRepeatRate)}};
@@ -415,7 +416,7 @@ static void keyboardHandleKey(void* data UNUSED,
         case WL_KEYBOARD_KEY_STATE_PRESSED: action = GLFW_PRESS; break;
         case WL_KEYBOARD_KEY_STATE_RELEASED: action = GLFW_RELEASE; break;
 #ifdef WL_KEYBOARD_KEY_STATE_REPEATED_SINCE_VERSION
-        case WL_KEYBOARD_KEY_STATE_REPEATED: action = GLFW_REPEAT; break;
+        case WL_KEYBOARD_KEY_STATE_REPEATED: return;
 #endif
     }
 
@@ -567,10 +568,7 @@ static void registryHandleGlobal(void* data UNUSED,
         if (!_glfw.wl.seat)
         {
             _glfw.wl.has_key_repeat_events = false;
-#if defined(WL_KEYBOARD_KEY_STATE_REPEATED_SINCE_VERSION)
-            _glfw.wl.seatVersion = MIN(WL_KEYBOARD_KEY_STATE_REPEATED_SINCE_VERSION, (int)version);
-            _glfw.wl.has_key_repeat_events = _glfw.wl.seatVersion >= WL_KEYBOARD_KEY_STATE_REPEATED_SINCE_VERSION;
-#elif defined(WL_POINTER_AXIS_RELATIVE_DIRECTION_SINCE_VERSION)
+#if defined(WL_POINTER_AXIS_RELATIVE_DIRECTION_SINCE_VERSION)
             _glfw.wl.seatVersion = MIN(WL_POINTER_AXIS_RELATIVE_DIRECTION_SINCE_VERSION, (int)version);
 #elif defined(WL_POINTER_AXIS_VALUE120_SINCE_VERSION)
             _glfw.wl.seatVersion = MIN(WL_POINTER_AXIS_VALUE120_SINCE_VERSION, (int)version);
